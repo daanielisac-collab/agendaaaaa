@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bloco de Notas - Agenda Interativa</title>
+<style>
+  body {font-family: Arial, sans-serif; background: #f0f4f8; margin:0; padding:0; display:flex; justify-content:center; align-items:flex-start; min-height:100vh;}
+  .container {max-width: 900px; width:100%; margin: 20px; background:#ffffff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); padding:20px; position:relative;}
+  h1{text-align:center; color:#333; margin-bottom:20px;}
+  .month-controls {display:flex; justify-content:space-between; margin-bottom:10px;}
+  .btn {padding:6px 12px; background:#7c3aed; color:white; border:none; border-radius:6px; cursor:pointer;}
+  .btn:hover {background:#5b21b6;}
+  .weekdays {display:grid; grid-template-columns: repeat(7, 1fr); text-align:center; font-weight:700; margin-bottom:5px; color:#444;}
+  .calendar {display:grid; grid-template-columns: repeat(7, 1fr); gap:5px;}
+  .day {background:#e0e7ff; padding:10px; border-radius:8px; text-align:center; cursor:pointer; position:relative; transition: transform 0.2s, background 0.2s;}
+  .day:hover {transform: scale(1.05);}
+  .day-number {font-weight:700; margin-bottom:5px;}
+  .note {margin-top:5px; font-size:13px; color:#111; min-height:20px; background:#f9fafb; padding:5px; border-radius:5px; border:1px solid #ccc; text-align:left;}
+  .note:focus {outline:none; border-color:#7c3aed; background:#f3e8ff;}
+  .holiday {background:#3b82f6; color:white;} /* Dias de feriado */
+  .weekend {background:#d1d5db;} /* Sábado e domingo */
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Bloco de Notas - Agenda Interativa</h1>
+  <div class="month-controls">
+    <button class="btn" id="prevMonth">◀ Mês Anterior</button>
+    <div id="monthLabel" style="font-weight:700; font-size:16px;"></div>
+    <button class="btn" id="nextMonth">Mês Seguinte ▶</button>
+  </div>
+  <div class="weekdays">
+    <div>Seg</div>
+    <div>Ter</div>
+    <div>Qua</div>
+    <div>Qui</div>
+    <div>Sex</div>
+    <div>Sáb</div>
+    <div>Dom</div>
+  </div>
+  <div class="calendar" id="calendar"></div>
+</div>
+
+<script>
+const calendarEl = document.getElementById('calendar');
+const monthLabel = document.getElementById('monthLabel');
+
+let today = new Date();
+let notes = JSON.parse(localStorage.getItem('agendaNotes')||'{}');
+
+// Lista de feriados (ano, mês 0-11, dia)
+const holidays = [
+  new Date(2025, 0, 1),   // 1 de janeiro
+  new Date(2025, 3, 21),  // 21 de abril
+  new Date(2025, 11, 25)  // 25 de dezembro
+];
+
+function getKey(date){ return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; }
+
+function isHoliday(date){
+  return holidays.some(h => h.getFullYear()===date.getFullYear() && h.getMonth()===date.getMonth() && h.getDate()===date.getDate());
+}
+
+function renderCalendar(){
+  calendarEl.innerHTML='';
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  monthLabel.textContent = today.toLocaleString('pt-BR',{month:'long', year:'numeric'});
+
+  const firstDay = new Date(year, month, 1).getDay(); // Domingo = 0
+  const offset = firstDay === 0 ? 6 : firstDay - 1; // Ajusta para começar de segunda-feira
+  const daysInMonth = new Date(year, month+1,0).getDate();
+
+  for(let i=0;i<offset;i++){ calendarEl.appendChild(document.createElement('div')); }
+
+  for(let d=1; d<=daysInMonth; d++){
+    const date = new Date(year, month, d);
+    const dayEl = document.createElement('div');
+    dayEl.className='day';
+    const key = getKey(date);
+
+    // Marca feriado
+    if(isHoliday(date)){
+      dayEl.classList.add('holiday');
+    } else {
+      // Marca finais de semana
+      const weekDay = date.getDay(); // Domingo = 0
+      if(weekDay === 0 || weekDay === 6){
+        dayEl.classList.add('weekend');
+      }
+    }
+
+    const dayNumber = document.createElement('div');
+    dayNumber.className='day-number';
+    dayNumber.textContent = d;
+
+    const noteEl = document.createElement('div');
+    noteEl.className='note';
+    noteEl.contentEditable = true;
+    noteEl.textContent = notes[key] || '';
+    noteEl.addEventListener('input', ()=>{
+      notes[key] = noteEl.textContent;
+      localStorage.setItem('agendaNotes', JSON.stringify(notes));
+      // Selo verde removido
+    });
+
+    dayEl.appendChild(dayNumber);
+    dayEl.appendChild(noteEl);
+    calendarEl.appendChild(dayEl);
+  }
+}
+
+document.getElementById('prevMonth').addEventListener('click', ()=>{ today.setMonth(today.getMonth()-1); renderCalendar(); });
+document.getElementById('nextMonth').addEventListener('click', ()=>{ today.setMonth(today.getMonth()+1); renderCalendar(); });
+
+renderCalendar();
+</script>
+</body>
+</html>
